@@ -169,17 +169,47 @@ app.use((err, req, res, next) => {
 
 const startServer = async (port) => {
   try {
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
     });
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.log(`Port ${port} is in use, trying ${port + 1}...`);
+        server.close();
+        setTimeout(() => {
+          startServer(port + 1);
+        }, 1000);
+      } else {
+        console.error('Server error:', error);
+        process.exit(1);
+      }
+    });
+
+    // Handle process termination
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received. Closing server...');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('SIGINT received. Closing server...');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+
+    return server;
   } catch (error) {
-    if (error.code === 'EADDRINUSE') {
-      console.log(`Port ${port} is in use, trying ${port + 1}...`);
-      startServer(port + 1);
-    } else {
-      console.error('Server error:', error);
-    }
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
 };
 
-startServer(3000); 
+// Start with a random port if 3000 is in use
+const initialPort = process.env.PORT || 3000;
+startServer(initialPort); 

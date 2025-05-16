@@ -4,11 +4,11 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 
 // Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Payment from './pages/Payment';
-import Transactions from './pages/Transactions';
-import UPI from './pages/UPI';
+import Login from '@/pages/Login';
+import Dashboard from '@/pages/Dashboard';
+import Payment from '@/pages/Payment';
+import Transactions from '@/pages/Transactions';
+import UPI from '@/pages/UPI';
 
 // Theme configuration
 const theme = createTheme({
