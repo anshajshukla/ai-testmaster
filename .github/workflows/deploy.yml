@@ -1,0 +1,72 @@
+name: Deploy AI-TestMaster
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install Dependencies
+      run: |
+        npm install
+        cd frontend && npm install
+        cd ../backend && npm install
+        cd ../ai-assistant && pip install -r requirements.txt
+        
+    - name: Run Tests
+      run: |
+        npm test
+        
+    - name: Run AI Analysis
+      if: failure()
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        cd ai-assistant
+        python debugBot.py --log-file ../reports/test-results.xml
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build and Push Docker Images
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/ai-testmaster-frontend:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/ai-testmaster-backend:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/ai-testmaster-ai:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max 
